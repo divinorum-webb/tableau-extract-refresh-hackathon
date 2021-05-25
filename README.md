@@ -4,10 +4,15 @@
 Pause and unpause Tableau Server (or Tableau Online) extract refresh tasks.
 
 ### Problem Statement
-Tableau extract refresh tasks run on schedules or are triggered on-demand by REST API
-or through the user interface. While you can suspend and activate schedules,
-there is no out-of-the-box solution for pausing and unpausing
-individual extract refresh tasks.
+What do you do if you need to pause an extract refresh task? You might manually 
+click through your user interface to find a workbook and remove it from its
+schedule. But what about the published datasource the workbook uses? Looks like
+you'll need to manually disable that as well.
+
+This project strives to avoid the manual hassle. Just point to a workbook 
+and say that you want to pause its extract refresh tasks. And we are done!
+
+Time to re-enable those extract refresh tasks? Point at the workbook and re-enable them.
 
 ### Solution
 This Python code makes it possible for any team using the Tableau REST API to 
