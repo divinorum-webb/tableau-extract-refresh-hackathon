@@ -1,0 +1,12 @@
+*.idea
+*.ipynb
+*.csv
+*.twbx
+*.twb
+*.tdsx
+*.tds
+*.xlsx
+*.json
+*.DS_Store
+src/config.py
+*__pycache__*
