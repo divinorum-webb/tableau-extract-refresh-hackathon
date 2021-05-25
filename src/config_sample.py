@@ -1,5 +1,5 @@
 server_config = {
-    'devyx': {
+    'tableau': {
         'server': <YOUR_SERVER>,
         'api_version': '3.11',
 #         'username': '<YOUR_USERNAME>',  # if you use username / password then do NOT use PAT credentials below
