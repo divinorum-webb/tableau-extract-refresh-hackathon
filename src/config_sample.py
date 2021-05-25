@@ -1,10 +1,12 @@
 server_config = {
     'devyx': {
-        'server': 'https://devyx.vizstack.io',
+        'server': <YOUR_SERVER>,
         'api_version': '3.11',
-        'personal_access_token_name': 'dev-may9',
-        'personal_access_token_secret': 'pGc3kL8PQEScmiBp06AvxA==:lVxJ6hJI1FnH5wzRUZbUVIlQMPTd7w2j',
-        'site_name': 'Devyx',
-        'site_url': 'Devyx'
+#         'username': '<YOUR_USERNAME>',  # if you use username / password then do NOT use PAT credentials below
+#         'password': '<YOUR_PASSWORD>',
+        'personal_access_token_name': '<YOUR_PAT_NAME>',
+        'personal_access_token_secret': '<YOUR_PAT_SECRET>',
+        'site_name': 'YourSiteName!!',
+        'site_url': 'YourSiteName'  # note that the site_url is your site name as it appears in your URL
     }
 }
