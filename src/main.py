@@ -2,7 +2,6 @@ from tableau_api_lib import TableauServerConnection
 
 from src.config.tableau_environments import authentication
 from extracts.extract_manager import ExtractRefreshTaskManager
-from extracts.schedule_manager import ScheduleManager
 
 
 def main():
