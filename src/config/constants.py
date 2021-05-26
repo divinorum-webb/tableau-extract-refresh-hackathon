@@ -44,3 +44,10 @@ class MetadataAPIConfig(Enum):
     def is_valid_content_type(cls, content_type: str) -> bool:
         """Returns True if the content type is valid."""
         return content_type in cls.CONTENT_TYPES.value
+
+
+class RestAPIConfig(Enum):
+    """Defines constants for interacting with the REST API."""
+
+    TASK_CREATED_SUCCESS_CODE = 200
+    TASK_DELETED_SUCCESS_CODE = 204

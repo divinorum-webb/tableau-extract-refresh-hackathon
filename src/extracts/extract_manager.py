@@ -6,7 +6,7 @@ from tableau_api_lib import TableauServerConnection
 from tableau_api_lib.utils import querying, flatten_dict_column, flatten_dict_list_column
 from typeguard import typechecked
 
-from src.config.metadata_api import MetadataAPIConfig, DataFrameColumns
+from src.config.constants import MetadataAPIConfig, DataFrameColumns, RestAPIConfig
 from src.extracts.task_logger import ExtractRefreshTaskLogger
 from src.utils.datasource_manager import DatasourceManager
 from src.utils.workbook_manager import WorkbookManager
@@ -153,7 +153,13 @@ class ExtractRefreshTaskManager:
         ]
         workbook_responses = self._create_workbook_extract_refresh_tasks(refresh_tasks_df=workbook_refresh_tasks_df)
         datasource_responses = self.unpause_upstream_datasource(workbook_id=workbook_id)
-        if all([True for response in workbook_responses if response.status_code == 200]):
+        if all(
+            [
+                True
+                for response in workbook_responses
+                if response.status_code == RestAPIConfig.TASK_CREATED_SUCCESS_CODE.value
+            ]
+        ):
             ExtractRefreshTaskLogger.remove_rows_for_unpaused_extract_refresh_tasks(
                 extract_type=MetadataAPIConfig.CONTENT_TYPE_WORKBOOK.value, unpaused_tasks_df=workbook_refresh_tasks_df
             )
@@ -227,7 +233,9 @@ class ExtractRefreshTaskManager:
             upstream_datasource_tasks_df[DataFrameColumns.WORKBOOK_ID.value] == workbook_id
         ]
         responses = self._create_datasource_extract_refresh_tasks(refresh_tasks_df=upstream_datasource_tasks_df)
-        if all([True for response in responses if response.status_code == 200]):
+        if all(
+            [True for response in responses if response.status_code == RestAPIConfig.TASK_CREATED_SUCCESS_CODE.value]
+        ):
             ExtractRefreshTaskLogger.remove_rows_for_unpaused_extract_refresh_tasks(
                 extract_type="upstream_datasource", unpaused_tasks_df=upstream_datasource_tasks_df
             )
@@ -305,7 +313,9 @@ class ExtractRefreshTaskManager:
             datasource_refresh_tasks_df[DataFrameColumns.DATASOURCE_ID.value] == datasource_id
         ]
         responses = self._create_datasource_extract_refresh_tasks(refresh_tasks_df=datasource_refresh_tasks_df)
-        if all([True for response in responses if response.status_code == 200]):
+        if all(
+            [True for response in responses if response.status_code == RestAPIConfig.TASK_CREATED_SUCCESS_CODE.value]
+        ):
             ExtractRefreshTaskLogger.remove_rows_for_unpaused_extract_refresh_tasks(
                 extract_type=MetadataAPIConfig.CONTENT_TYPE_DATASOURCE.value,
                 unpaused_tasks_df=datasource_refresh_tasks_df,
