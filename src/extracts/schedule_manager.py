@@ -22,7 +22,7 @@ class ScheduleManager:
             self._extract_schedules_df = schedules_df
         return self._extract_schedules_df
 
-    def _get_schedule_id(self, schedule_name: str) -> str:
+    def get_schedule_id(self, schedule_name: str) -> str:
         """Returns the local unique identifier (luid) for the named Tableau Server schedule."""
         try:
             return self.extract_schedules_df[self.extract_schedules_df["name"] == schedule_name]["id"].to_list()[0]
@@ -53,7 +53,7 @@ class ScheduleManager:
         """
         self._validate_schedule_inputs(schedule_name=schedule_name, schedule_id=schedule_id)
         if schedule_name:
-            schedule_id = self._get_schedule_id(schedule_name=schedule_name)
+            schedule_id = self.get_schedule_id(schedule_name=schedule_name)
         return self.conn.update_schedule(schedule_id=schedule_id, schedule_state="Suspended")
 
     def unpause_schedule(
@@ -72,5 +72,5 @@ class ScheduleManager:
         """
         self._validate_schedule_inputs(schedule_name=schedule_name, schedule_id=schedule_id)
         if schedule_name:
-            schedule_id = self._get_schedule_id(schedule_name=schedule_name)
+            schedule_id = self.get_schedule_id(schedule_name=schedule_name)
         return self.conn.update_schedule(schedule_id=schedule_id, schedule_state="Active")
