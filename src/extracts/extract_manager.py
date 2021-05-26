@@ -125,7 +125,7 @@ class ExtractRefreshTaskManager:
 
     def unpause_workbook(
         self, workbook_name: Optional[str] = None, workbook_id: Optional[str] = None
-    ) -> List[requests.Response]:
+    ) -> Tuple[List[requests.Response], List[requests.Response]]:
         """Unpauses extract refresh tasks for a workbook.
 
         This method can be called on either the workbook name or the workbook ID (luid). Either value is valid, but
@@ -143,14 +143,15 @@ class ExtractRefreshTaskManager:
             extract_type="workbook"
         )
         workbook_refresh_tasks_df = workbook_refresh_tasks_df[workbook_refresh_tasks_df["workbook_id"] == workbook_id]
-        responses = self._create_workbook_extract_refresh_tasks(refresh_tasks_df=workbook_refresh_tasks_df)
-        if all([True for response in responses if response.status_code == 200]):
+        workbook_responses = self._create_workbook_extract_refresh_tasks(refresh_tasks_df=workbook_refresh_tasks_df)
+        datasource_responses = self.unpause_upstream_datasource(workbook_id=workbook_id)
+        if all([True for response in workbook_responses if response.status_code == 200]):
             ExtractRefreshTaskLogger.remove_rows_for_unpaused_extract_refresh_tasks(
                 extract_type="workbook", unpaused_tasks_df=workbook_refresh_tasks_df
             )
         else:
             raise ValueError(f"Some of the extracts for workbook `luid: {workbook_id}` failed to unpause.")
-        return responses
+        return workbook_responses, datasource_responses
 
     # EXTRACT REFRESH TASKS FOR DATASOURCES UPSTREAM FROM WORKBOOKS
 
