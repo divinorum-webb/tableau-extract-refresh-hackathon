@@ -19,6 +19,9 @@ class ExtractRefreshTaskManager:
     This class supports two approaches to programmatically pausing extract refresh tasks using the Tabelau REST API:
     1) Supsending (pausing) and activating (unpausing) an entire schedule and all of its associated tasks.
     2) Deleting (pausing) and creating (unpausing) individual extract refresh tasks.
+
+    Args:
+        conn: An active Tableau Server (or Tableau Online) connection signed in and having a valid auth token.
     """
 
     def __init__(self, conn: TableauServerConnection):
