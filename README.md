@@ -4,20 +4,22 @@
 Pause and unpause Tableau Server (or Tableau Online) extract refresh tasks.
 
 ### Problem Statement
-What do you do if you need to pause an extract refresh task? You might manually 
-click through your user interface to find a workbook and remove it from its
-schedule. But what about the published datasource the workbook uses? Looks like
-you'll need to manually disable that as well.
+If you need to stop the extract refresh tasks for a workbook, datasource, or a workbook and
+its upstream datasources then you're in a bit of a pickle.
 
-This project strives to avoid the manual hassle. Just point to a workbook 
-and say that you want to pause its extract refresh tasks. And we are done!
-
-Time to re-enable those extract refresh tasks? Point at the workbook and re-enable them.
+You could:
+1) Suspend an entire schedule and all of its tasks, which stops your workbook's extracts but also
+goes nuclear on every other task depending on that schedule.
+2) Manually comb through your extract refresh tasks and delete the ones which 
+you want to temporarily disable, with plans to manually recreate them later.
+3) Use Tableau APIs to automate what is otherwise a manual time vampire.
 
 ### Solution
-This Python code makes it possible for any team using the Tableau REST API to 
-take what has been built here and integrate with their own environment to 
-pause and unpause Tableau extract refresh tasks.
+This project makes it possible to pause the extract refresh tasks for the specified 
+workbook or datasource. If you point to a workbook, its upstream datasources are automatically 
+detected and they are paused as well.
+
+You can then unpause these extract refresh tasks.
 
 Capabilities are as follows:
 1) Suspending an entire Tableau Server schedule (Tableau Server only).
@@ -25,8 +27,8 @@ Capabilities are as follows:
 3) Pausing all extract refresh tasks associated with a workbook or datasource.
 4) Unpausing all extract refresh tasks associated with a workbook or datasource.
 
-Because there is no REST API to literally pause and unpause an extract refresh task, 
-this process makes it easy to delete all tasks associated with a workbook (or datasource)
+There is no REST API to pause and unpause an extract refresh task.
+This process makes it easy to delete all tasks associated with a workbook (or datasource)
 and to recreate (unpause) those tasks when the time is right.
 
 ### Tableau Tools
@@ -41,7 +43,7 @@ the workbook uses. When pausing tasks for a specific datasource, this is more st
 as you only need to identify tasks directly related to that datasource.
 The Metadata API helps us to identify exactly which refresh tasks we need to target.
 
-### REST API
+#### REST API
 The REST API is our go-to tool for updating schedules and creating or deleting extract 
 refresh tasks. Additionally, we can use the REST API to query details for our workbooks, 
 datasources, schedules, and extract refresh tasks.
