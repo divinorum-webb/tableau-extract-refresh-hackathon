@@ -85,17 +85,12 @@ class ExtractRefreshTaskManager:
         tasks_df = flatten_dict_column(df=tasks_df, col_name=content_type, keys=[DataFrameColumns.CONTENT_ID.value])
         return tasks_df
 
+    # EXTRACT REFRESH TASKS FOR WORKBOOKS
+
     @property
     def workbook_extract_refresh_tasks_df(self) -> pd.DataFrame:
         """Returns a Pandas DataFrame describing all of the extract refresh tasks for workbooks."""
         return self._get_content_extract_refresh_tasks_df(content_type=MetadataAPIConfig.CONTENT_TYPE_WORKBOOK.value)
-
-    @property
-    def datasource_extract_refresh_tasks_df(self) -> pd.DataFrame:
-        """Returns a Pandas DataFrame describing all of the extract refresh tasks for datasources."""
-        return self._get_content_extract_refresh_tasks_df(content_type=MetadataAPIConfig.CONTENT_TYPE_DATASOURCE.value)
-
-    # EXTRACT REFRESH TASKS FOR WORKBOOKS
 
     def _get_workbook_refresh_tasks(self, workbook_id: str) -> pd.DataFrame:
         """Returns the extract refresh tasks associated with a specific workbook."""
@@ -243,6 +238,11 @@ class ExtractRefreshTaskManager:
         return responses
 
     # EXTRACT REFRESH TASKS FOR DATASOURCES
+
+    @property
+    def datasource_extract_refresh_tasks_df(self) -> pd.DataFrame:
+        """Returns a Pandas DataFrame describing all of the extract refresh tasks for datasources."""
+        return self._get_content_extract_refresh_tasks_df(content_type=MetadataAPIConfig.CONTENT_TYPE_DATASOURCE.value)
 
     def _get_datasource_refresh_tasks(self, datasource_id: str) -> pd.DataFrame:
         """Returns the extract refresh tasks associated with a specific datasource."""
