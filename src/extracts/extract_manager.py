@@ -191,6 +191,21 @@ class ExtractRefreshTaskManager:
         else:
             raise ConnectionError(f"Received an unexpected response from the Metadata API: {response.content}")
 
+    def _pause_upstream_datasources(self, workbook_id: str) -> List[requests.Response]:
+        """Pauses extract refresh tasks for a datasource upstream from a workbook.
+
+        Args:
+            # upstream_datasources_df: A Pandas DataFrame describing the upstream datasource being paused.
+            workbook_id: The local unique identifier (luid) of the workbook downstream from the datasource(s).
+        """
+        upstream_datasource_tasks_df = self._get_upstream_datasource_extract_tasks_df(workbook_id=workbook_id)
+        upstream_datasource_tasks_df["workbook_id"] = workbook_id
+        ExtractRefreshTaskLogger.write_extract_refresh_tasks_to_pause(
+            extract_type="upstream_datasource", refresh_tasks_df=upstream_datasource_tasks_df
+        )
+        responses = self._delete_extract_refresh_tasks(refresh_tasks_df=upstream_datasource_tasks_df)
+        return responses
+
     def unpause_upstream_datasource(self, workbook_id: str) -> List[requests.Response]:
         """Unpauses extract refresh tasks for a datasource upstream from the target workbook.
 
@@ -250,21 +265,6 @@ class ExtractRefreshTaskManager:
             extract_type="datasource", refresh_tasks_df=datasource_refresh_tasks_df
         )
         responses = self._delete_extract_refresh_tasks(refresh_tasks_df=datasource_refresh_tasks_df)
-        return responses
-
-    def _pause_upstream_datasources(self, workbook_id: str) -> List[requests.Response]:
-        """Pauses extract refresh tasks for a datasource upstream from a workbook.
-
-        Args:
-            # upstream_datasources_df: A Pandas DataFrame describing the upstream datasource being paused.
-            workbook_id: The local unique identifier (luid) of the workbook downstream from the datasource(s).
-        """
-        upstream_datasource_tasks_df = self._get_upstream_datasource_extract_tasks_df(workbook_id=workbook_id)
-        upstream_datasource_tasks_df["workbook_id"] = workbook_id
-        ExtractRefreshTaskLogger.write_extract_refresh_tasks_to_pause(
-            extract_type="upstream_datasource", refresh_tasks_df=upstream_datasource_tasks_df
-        )
-        responses = self._delete_extract_refresh_tasks(refresh_tasks_df=upstream_datasource_tasks_df)
         return responses
 
     def unpause_datasource(
