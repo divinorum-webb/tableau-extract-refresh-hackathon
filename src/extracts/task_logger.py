@@ -2,7 +2,7 @@ import pandas as pd
 
 
 class ExtractRefreshTaskLogger:
-    """Defines logic for storing and retrieving details for paussed extract refresh tasks.
+    """Defines logic for storing and retrieving details for paused extract refresh tasks.
 
     You can use this class to build your own logic driving the process of reading and writing details
     for extract refresh tasks that are currently paused (deleted) and can be unpaused (re-created).
