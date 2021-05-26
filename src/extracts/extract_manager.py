@@ -21,74 +21,9 @@ class ExtractRefreshTaskManager:
 
     def __init__(self, conn: TableauServerConnection):
         self.conn = conn
-        self._extract_schedules_df = None
         self._extract_refresh_tasks_df = None
         self._workbooks_df = None
         self._datasources_df = None
-
-    # SCHEDULES
-
-    @property
-    def extract_schedules_df(self) -> pd.DataFrame:
-        """Returns a Pandas DataFrame describing all schedules available to the Tableau connection."""
-        if self._extract_schedules_df is None:
-            schedules_df = querying.get_schedules_dataframe(self.conn)
-            schedules_df = schedules_df[schedules_df["type"] == "Extract"]
-            self._extract_schedules_df = schedules_df
-        return self._extract_schedules_df
-
-    def _get_schedule_id(self, schedule_name: str) -> str:
-        """Returns the local unique identifier (luid) for the named Tableau Server schedule."""
-        try:
-            return self.extract_schedules_df[self.extract_schedules_df["name"] == schedule_name]["id"].to_list()[0]
-        except IndexError:
-            raise IndexError(f"No schedule with name `{schedule_name}` was found.")
-
-    @staticmethod
-    def _validate_schedule_inputs(schedule_name: Optional[str] = None, schedule_id: Optional[str] = None) -> None:
-        """Raises an exception if neither a schedule name nor schedule ID (luid) were provided."""
-        if not any([schedule_name, schedule_id]):
-            raise ValueError(
-                "To pause or unpause a schedule, you must provide a schedule name or a schedule ID (luid)."
-            )
-
-    def pause_schedule(
-        self, schedule_name: Optional[str] = None, schedule_id: Optional[str] = None
-    ) -> requests.Response:
-        """Pauses an entire extract refresh schedule, halting all tasks associated with the targeted schedule.
-
-        This method can be called on either the schedule name or the schedule ID (luid). Either value is valid, but at
-        least one of them must be provided for this method to pause a schedule.
-
-        Args:
-            schedule_name: The name of the schedule being paused (suspended).
-            schedule_id: The local unique identifier (luid) of the schedule being paused (suspended).
-        Raises:
-            ValueError: Neither a schedule name nor a schedule ID were provided.
-        """
-        self._validate_schedule_inputs(schedule_name=schedule_name, schedule_id=schedule_id)
-        if schedule_name:
-            schedule_id = self._get_schedule_id(schedule_name=schedule_name)
-        return self.conn.update_schedule(schedule_id=schedule_id, schedule_state="Suspended")
-
-    def unpause_schedule(
-        self, schedule_name: Optional[str] = None, schedule_id: Optional[str] = None
-    ) -> requests.Response:
-        """Unpauses an entire extract refresh schedule, enabling all tasks associated with the targeted schedule.
-
-        This method can be called on either the schedule name or the schedule ID (luid). Either value is valid, but at
-        least one of them must be provided for this method to pause a schedule.
-
-        Args:
-            schedule_name: The name of the schedule being unpaused (activated).
-            schedule_id: The local unique identifier (luid) of the schedule being unpaused (activated).
-        Raises:
-            ValueError: Neither a schedule name nor a schedule ID were provided.
-        """
-        self._validate_schedule_inputs(schedule_name=schedule_name, schedule_id=schedule_id)
-        if schedule_name:
-            schedule_id = self._get_schedule_id(schedule_name=schedule_name)
-        return self.conn.update_schedule(schedule_id=schedule_id, schedule_state="Active")
 
     # EXTRACT REFRESH TASKS
 
@@ -99,39 +34,29 @@ class ExtractRefreshTaskManager:
             self._extract_refresh_tasks_df = querying.get_extract_refresh_tasks_dataframe(self.conn)
         return self._extract_refresh_tasks_df
 
+    def _get_content_extract_refresh_tasks_df(self, content_type: str) -> pd.DataFrame:
+        """Returns a Pandas DataFrame describing all of the extract refresh tasks for the content type.
+
+        Args:
+            content_type: The variety of content whose extract refresh tasks are being queried.
+
+        Raises:
+            ValueError: The content_type must be either 'workbook' or 'datasource'.
+        """
+        tasks_df = self.extract_refresh_tasks_df[~self.extract_refresh_tasks_df[content_type].isnull()].copy()
+        tasks_df = flatten_dict_column(df=tasks_df, col_name="schedule", keys=["id", "name"])
+        tasks_df = flatten_dict_column(df=tasks_df, col_name=content_type, keys=["id"])
+        return tasks_df
+
     @property
     def workbook_extract_refresh_tasks_df(self) -> pd.DataFrame:
         """Returns a Pandas DataFrame describing all of the extract refresh tasks for workbooks."""
-        workbook_tasks_df = self.extract_refresh_tasks_df[~self.extract_refresh_tasks_df["workbook"].isnull()].copy()
-        workbook_tasks_df = flatten_dict_column(df=workbook_tasks_df, col_name="schedule", keys=["id", "name"])
-        workbook_tasks_df = flatten_dict_column(df=workbook_tasks_df, col_name="workbook", keys=["id"])
-        return workbook_tasks_df
+        return self._get_content_extract_refresh_tasks_df(content_type="workbook")
 
     @property
     def datasource_extract_refresh_tasks_df(self) -> pd.DataFrame:
         """Returns a Pandas DataFrame describing all of the extract refresh tasks for datasources."""
-        datasource_tasks_df = self.extract_refresh_tasks_df[
-            ~self.extract_refresh_tasks_df["datasource"].isnull()
-        ].copy()
-        datasource_tasks_df = flatten_dict_column(df=datasource_tasks_df, col_name="schedule", keys=["id", "name"])
-        datasource_tasks_df = flatten_dict_column(df=datasource_tasks_df, col_name="datasource", keys=["id"])
-        return datasource_tasks_df
-
-    # @staticmethod
-    # def _write_extract_refresh_tasks_to_pause(extract_type: str, refresh_tasks_df: pd.DataFrame) -> None:
-    #     """Writes the details for the extract refresh tasks that will be paused to a CSV file."""
-    #     refresh_tasks_df.to_csv(f"data/paused_{extract_type}_extract_refresh_tasks.csv")
-    #
-    # @staticmethod
-    # def _read_extract_refresh_tasks_to_pause(extract_type: str) -> pd.DataFrame:
-    #     """Reads the details from a CSV file for the extract refresh tasks that will be unpaused."""
-    #     return pd.read_csv(f"data/paused_{extract_type}_extract_refresh_tasks.csv")
-
-    def _remove_unpaused_extract_refresh_tasks(self, extract_type: str, unpaused_tasks_df: pd.DataFrame) -> None:
-        """Writes the details for the extract refresh tasks that will be paused to a CSV file."""
-        existing_tasks_df = ExtractRefreshTaskLogger.read_extract_refresh_tasks_to_unpause(extract_type=extract_type)
-        existing_tasks_df = existing_tasks_df[~existing_tasks_df["id"].isin(unpaused_tasks_df["id"])]
-        existing_tasks_df.to_csv(f"data/paused_{extract_type}_extract_refresh_tasks.csv", mode="w")
+        return self._get_content_extract_refresh_tasks_df(content_type="datasource")
 
     def _delete_extract_refresh_tasks(self, refresh_tasks_df: pd.DataFrame) -> List[requests.Response]:
         """Deletes the extract refresh tasks described by the Pandas DataFrame provided."""
@@ -246,13 +171,13 @@ class ExtractRefreshTaskManager:
             refresh_tasks_df=upstream_datasource_tasks_df
         )
         if all([True for response in workbook_responses if response.status_code == 200]):
-            self._remove_unpaused_extract_refresh_tasks(
+            ExtractRefreshTaskLogger.remove_rows_for_unpaused_extract_refresh_tasks(
                 extract_type="workbook", unpaused_tasks_df=workbook_refresh_tasks_df
             )
         else:
             raise ValueError(f"Some of the extracts for workbook `luid: {workbook_id}` failed to unpause.")
         if all([True for response in datasource_responses if response.status_code == 200]):
-            self._remove_unpaused_extract_refresh_tasks(
+            ExtractRefreshTaskLogger.remove_rows_for_unpaused_extract_refresh_tasks(
                 extract_type="upstream_datasource", unpaused_tasks_df=upstream_datasource_tasks_df
             )
         else:
@@ -396,7 +321,7 @@ class ExtractRefreshTaskManager:
         ]
         responses = self._create_datasource_extract_refresh_tasks(refresh_tasks_df=datasource_refresh_tasks_df)
         if all([True for response in responses if response.status_code == 200]):
-            self._remove_unpaused_extract_refresh_tasks(
+            ExtractRefreshTaskLogger.remove_rows_for_unpaused_extract_refresh_tasks(
                 extract_type="datasource", unpaused_tasks_df=datasource_refresh_tasks_df
             )
         else:
