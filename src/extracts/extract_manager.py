@@ -7,6 +7,7 @@ from tableau_api_lib.utils import querying, flatten_dict_column, flatten_dict_li
 from typeguard import typechecked
 
 from src.config.metadata_api import MetadataAPIConfig, MetadataColumns
+from src.extracts.task_logger import ExtractRefreshTaskLogger
 
 
 @typechecked
@@ -116,19 +117,19 @@ class ExtractRefreshTaskManager:
         datasource_tasks_df = flatten_dict_column(df=datasource_tasks_df, col_name="datasource", keys=["id"])
         return datasource_tasks_df
 
-    @staticmethod
-    def _write_extract_refresh_tasks_to_pause(extract_type: str, refresh_tasks_df: pd.DataFrame) -> None:
-        """Writes the details for the extract refresh tasks that will be paused to a CSV file."""
-        refresh_tasks_df.to_csv(f"data/paused_{extract_type}_extract_refresh_tasks.csv")
-
-    @staticmethod
-    def _read_extract_refresh_tasks_to_pause(extract_type: str) -> pd.DataFrame:
-        """Reads the details from a CSV file for the extract refresh tasks that will be unpaused."""
-        return pd.read_csv(f"data/paused_{extract_type}_extract_refresh_tasks.csv")
+    # @staticmethod
+    # def _write_extract_refresh_tasks_to_pause(extract_type: str, refresh_tasks_df: pd.DataFrame) -> None:
+    #     """Writes the details for the extract refresh tasks that will be paused to a CSV file."""
+    #     refresh_tasks_df.to_csv(f"data/paused_{extract_type}_extract_refresh_tasks.csv")
+    #
+    # @staticmethod
+    # def _read_extract_refresh_tasks_to_pause(extract_type: str) -> pd.DataFrame:
+    #     """Reads the details from a CSV file for the extract refresh tasks that will be unpaused."""
+    #     return pd.read_csv(f"data/paused_{extract_type}_extract_refresh_tasks.csv")
 
     def _remove_unpaused_extract_refresh_tasks(self, extract_type: str, unpaused_tasks_df: pd.DataFrame) -> None:
         """Writes the details for the extract refresh tasks that will be paused to a CSV file."""
-        existing_tasks_df = self._read_extract_refresh_tasks_to_pause(extract_type=extract_type)
+        existing_tasks_df = ExtractRefreshTaskLogger.read_extract_refresh_tasks_to_unpause(extract_type=extract_type)
         existing_tasks_df = existing_tasks_df[~existing_tasks_df["id"].isin(unpaused_tasks_df["id"])]
         existing_tasks_df.to_csv(f"data/paused_{extract_type}_extract_refresh_tasks.csv", mode="w")
 
@@ -195,7 +196,7 @@ class ExtractRefreshTaskManager:
 
     def pause_workbook(
         self, workbook_name: Optional[str] = None, workbook_id: Optional[str] = None
-    ) -> List[requests.Response]:
+    ) -> Tuple[List[requests.Response], List[requests.Response]]:
         """Pauses extract refresh tasks for a workbook.
 
         This method can be called on either the workbook name or the workbook ID (luid). Either value is valid, but
@@ -210,10 +211,12 @@ class ExtractRefreshTaskManager:
         if workbook_name:
             workbook_id = self._get_workbook_id(workbook_name=workbook_name)
         workbook_refresh_tasks_df = self._get_workbook_refresh_tasks(workbook_id=workbook_id)
-        self._pause_upstream_datasources(workbook_id=workbook_id)
-        self._write_extract_refresh_tasks_to_pause(extract_type="workbook", refresh_tasks_df=workbook_refresh_tasks_df)
-        responses = self._delete_extract_refresh_tasks(refresh_tasks_df=workbook_refresh_tasks_df)
-        return responses
+        datasource_responses = self._pause_upstream_datasources(workbook_id=workbook_id)
+        ExtractRefreshTaskLogger.write_extract_refresh_tasks_to_pause(
+            extract_type="workbook", refresh_tasks_df=workbook_refresh_tasks_df
+        )
+        workbook_responses = self._delete_extract_refresh_tasks(refresh_tasks_df=workbook_refresh_tasks_df)
+        return workbook_responses, datasource_responses
 
     def unpause_workbook(
         self, workbook_name: Optional[str] = None, workbook_id: Optional[str] = None
@@ -231,8 +234,12 @@ class ExtractRefreshTaskManager:
         """
         if workbook_name:
             workbook_id = self._get_workbook_id(workbook_name=workbook_name)
-        workbook_refresh_tasks_df = self._read_extract_refresh_tasks_to_pause(extract_type="workbook")
-        upstream_datasource_tasks_df = self._read_extract_refresh_tasks_to_pause(extract_type="upstream_datasource")
+        workbook_refresh_tasks_df = ExtractRefreshTaskLogger.read_extract_refresh_tasks_to_unpause(
+            extract_type="workbook"
+        )
+        upstream_datasource_tasks_df = ExtractRefreshTaskLogger.read_extract_refresh_tasks_to_unpause(
+            extract_type="upstream_datasource"
+        )
         workbook_refresh_tasks_df = workbook_refresh_tasks_df[workbook_refresh_tasks_df["workbook_id"] == workbook_id]
         workbook_responses = self._create_workbook_extract_refresh_tasks(refresh_tasks_df=workbook_refresh_tasks_df)
         datasource_responses = self._create_datasource_extract_refresh_tasks(
@@ -286,8 +293,6 @@ class ExtractRefreshTaskManager:
                 upstream_datasources_df = upstream_datasources_df[
                     upstream_datasources_df[MetadataColumns.HAS_EXTRACTS.value] == True
                 ]
-                print("upstream_datasources_df4: ", upstream_datasources_df)
-                print("upstream_datasources_df4 cols: ", upstream_datasources_df.columns)
             except KeyError:
                 upstream_datasources_df = pd.DataFrame()
             return upstream_datasources_df
@@ -346,7 +351,7 @@ class ExtractRefreshTaskManager:
         if datasource_name:
             datasource_id = self._get_datasource_id(datasource_name=datasource_name)
         datasource_refresh_tasks_df = self._get_datasource_refresh_tasks(datasource_id=datasource_id)
-        self._write_extract_refresh_tasks_to_pause(
+        ExtractRefreshTaskLogger.write_extract_refresh_tasks_to_pause(
             extract_type="datasource", refresh_tasks_df=datasource_refresh_tasks_df
         )
         responses = self._delete_extract_refresh_tasks(refresh_tasks_df=datasource_refresh_tasks_df)
@@ -361,7 +366,7 @@ class ExtractRefreshTaskManager:
         """
         upstream_datasource_tasks_df = self._get_upstream_datasource_extract_tasks_df(workbook_id=workbook_id)
         upstream_datasource_tasks_df["workbook_id"] = workbook_id
-        self._write_extract_refresh_tasks_to_pause(
+        ExtractRefreshTaskLogger.write_extract_refresh_tasks_to_pause(
             extract_type="upstream_datasource", refresh_tasks_df=upstream_datasource_tasks_df
         )
         responses = self._delete_extract_refresh_tasks(refresh_tasks_df=upstream_datasource_tasks_df)
@@ -383,7 +388,9 @@ class ExtractRefreshTaskManager:
         """
         if datasource_name:
             datasource_id = self._get_datasource_id(datasource_name=datasource_name)
-        datasource_refresh_tasks_df = self._read_extract_refresh_tasks_to_pause(extract_type="datasource")
+        datasource_refresh_tasks_df = ExtractRefreshTaskLogger.read_extract_refresh_tasks_to_unpause(
+            extract_type="datasource"
+        )
         datasource_refresh_tasks_df = datasource_refresh_tasks_df[
             datasource_refresh_tasks_df["datasource_id"] == datasource_id
         ]
