@@ -8,8 +8,8 @@ from typeguard import typechecked
 
 from src.config.metadata_api import MetadataAPIConfig, DataFrameColumns
 from src.extracts.task_logger import ExtractRefreshTaskLogger
-from src.utils.workbook_manager import WorkbookManager
 from src.utils.datasource_manager import DatasourceManager
+from src.utils.workbook_manager import WorkbookManager
 
 
 @typechecked

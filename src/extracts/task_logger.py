@@ -19,9 +19,7 @@ class ExtractRefreshTaskLogger:
         return pd.read_csv(f"data/paused_{extract_type}_extract_refresh_tasks.csv")
 
     @classmethod
-    def remove_rows_for_unpaused_extract_refresh_tasks(
-        cls, extract_type: str, unpaused_tasks_df: pd.DataFrame
-    ) -> None:
+    def remove_rows_for_unpaused_extract_refresh_tasks(cls, extract_type: str, unpaused_tasks_df: pd.DataFrame) -> None:
         """Deletes rows  from a CSV file for extract refresh tasks that have been unpaused."""
         existing_tasks_df = cls.read_extract_refresh_tasks_to_unpause(extract_type=extract_type)
         existing_tasks_df = existing_tasks_df[~existing_tasks_df["id"].isin(unpaused_tasks_df["id"])]
