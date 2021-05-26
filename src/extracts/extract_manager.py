@@ -1,10 +1,12 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import pandas as pd
 import requests
 from tableau_api_lib import TableauServerConnection
-from tableau_api_lib.utils import querying, flatten_dict_column
+from tableau_api_lib.utils import querying, flatten_dict_column, flatten_dict_list_column
 from typeguard import typechecked
+
+from src.config.metadata_api import MetadataAPIConfig, MetadataColumns
 
 
 @typechecked
@@ -117,12 +119,18 @@ class ExtractRefreshTaskManager:
     @staticmethod
     def _write_extract_refresh_tasks_to_pause(extract_type: str, refresh_tasks_df: pd.DataFrame) -> None:
         """Writes the details for the extract refresh tasks that will be paused to a CSV file."""
-        refresh_tasks_df.to_csv(f"paused_{extract_type}_extract_refresh_tasks.csv", index=False)
+        refresh_tasks_df.to_csv(f"data/paused_{extract_type}_extract_refresh_tasks.csv")
 
     @staticmethod
     def _read_extract_refresh_tasks_to_pause(extract_type: str) -> pd.DataFrame:
         """Reads the details from a CSV file for the extract refresh tasks that will be unpaused."""
-        return pd.read_csv(filepath_or_buffer=f"paused_{extract_type}_extract_refresh_tasks.csv")
+        return pd.read_csv(f"data/paused_{extract_type}_extract_refresh_tasks.csv")
+
+    def _remove_unpaused_extract_refresh_tasks(self, extract_type: str, unpaused_tasks_df: pd.DataFrame) -> None:
+        """Writes the details for the extract refresh tasks that will be paused to a CSV file."""
+        existing_tasks_df = self._read_extract_refresh_tasks_to_pause(extract_type=extract_type)
+        existing_tasks_df = existing_tasks_df[~existing_tasks_df["id"].isin(unpaused_tasks_df["id"])]
+        existing_tasks_df.to_csv(f"data/paused_{extract_type}_extract_refresh_tasks.csv", mode="w")
 
     def _delete_extract_refresh_tasks(self, refresh_tasks_df: pd.DataFrame) -> List[requests.Response]:
         """Deletes the extract refresh tasks described by the Pandas DataFrame provided."""
@@ -202,13 +210,14 @@ class ExtractRefreshTaskManager:
         if workbook_name:
             workbook_id = self._get_workbook_id(workbook_name=workbook_name)
         workbook_refresh_tasks_df = self._get_workbook_refresh_tasks(workbook_id=workbook_id)
+        self._pause_upstream_datasources(workbook_id=workbook_id)
         self._write_extract_refresh_tasks_to_pause(extract_type="workbook", refresh_tasks_df=workbook_refresh_tasks_df)
         responses = self._delete_extract_refresh_tasks(refresh_tasks_df=workbook_refresh_tasks_df)
         return responses
 
     def unpause_workbook(
         self, workbook_name: Optional[str] = None, workbook_id: Optional[str] = None
-    ) -> List[requests.Response]:
+    ) -> Tuple[List[requests.Response], List[requests.Response]]:
         """Unpauses extract refresh tasks for a workbook.
 
         This method can be called on either the workbook name or the workbook ID (luid). Either value is valid, but
@@ -223,9 +232,67 @@ class ExtractRefreshTaskManager:
         if workbook_name:
             workbook_id = self._get_workbook_id(workbook_name=workbook_name)
         workbook_refresh_tasks_df = self._read_extract_refresh_tasks_to_pause(extract_type="workbook")
+        upstream_datasource_tasks_df = self._read_extract_refresh_tasks_to_pause(extract_type="upstream_datasource")
         workbook_refresh_tasks_df = workbook_refresh_tasks_df[workbook_refresh_tasks_df["workbook_id"] == workbook_id]
-        responses = self._create_workbook_extract_refresh_tasks(refresh_tasks_df=workbook_refresh_tasks_df)
-        return responses
+        workbook_responses = self._create_workbook_extract_refresh_tasks(refresh_tasks_df=workbook_refresh_tasks_df)
+        datasource_responses = self._create_datasource_extract_refresh_tasks(
+            refresh_tasks_df=upstream_datasource_tasks_df
+        )
+        if all([True for response in workbook_responses if response.status_code == 200]):
+            self._remove_unpaused_extract_refresh_tasks(
+                extract_type="workbook", unpaused_tasks_df=workbook_refresh_tasks_df
+            )
+        else:
+            raise ValueError(f"Some of the extracts for workbook `luid: {workbook_id}` failed to unpause.")
+        if all([True for response in datasource_responses if response.status_code == 200]):
+            self._remove_unpaused_extract_refresh_tasks(
+                extract_type="upstream_datasource", unpaused_tasks_df=upstream_datasource_tasks_df
+            )
+        else:
+            raise ValueError(
+                f"Some of the extracts for upstream datasources `luid: {upstream_datasource_tasks_df[MetadataColumns.DATASOURCE_ID.value]}` failed to unpause."
+            )
+        return workbook_responses, datasource_responses
+
+    # UPSTREAM DATASOURCES FOR WORKBOOKS
+
+    def _get_upstream_datasource_extract_tasks_df(self, workbook_id: str) -> pd.DataFrame:
+        """Returns the extract refresh tasks for the given upstream datasources."""
+        upstream_datasources_df = self._get_workbook_upstream_datasources_df(workbook_id=workbook_id)
+        upstream_datasource_extract_tasks_df = pd.DataFrame()
+        for index, row in upstream_datasources_df.iterrows():
+            datasource_tasks_df = self._get_datasource_refresh_tasks(
+                datasource_id=row[MetadataColumns.DATASOURCE_ID.value]
+            )
+            upstream_datasource_extract_tasks_df = upstream_datasource_extract_tasks_df.append(datasource_tasks_df)
+        return upstream_datasource_extract_tasks_df
+
+    def _get_workbook_upstream_datasources_df(self, workbook_id: str) -> pd.DataFrame:
+        """Returns a Pandas DataFrame describing the upstream datasources (for a workbook) having extracts."""
+        response = self.conn.metadata_graphql_query(query=MetadataAPIConfig.UPSTREAM_DATASOURCES_QUERY.value)
+        if response.status_code == MetadataAPIConfig.SUCCESS_STATUS_CODE.value:
+            upstream_datasources_df = pd.DataFrame(
+                response.json()[MetadataAPIConfig.METADATA_RESPONSE_OUTER_KEY.value][
+                    MetadataAPIConfig.METADATA_RESPONSE_INNER_KEY.value
+                ]
+            )
+            try:
+                upstream_datasources_df = flatten_dict_list_column(
+                    df=upstream_datasources_df, col_name=MetadataColumns.UPSTREAM_DATASOURCES.value
+                )
+                upstream_datasources_df = upstream_datasources_df[
+                    upstream_datasources_df[MetadataColumns.WORKBOOK_ID.value] == workbook_id
+                ]
+                upstream_datasources_df = upstream_datasources_df[
+                    upstream_datasources_df[MetadataColumns.HAS_EXTRACTS.value] == True
+                ]
+                print("upstream_datasources_df4: ", upstream_datasources_df)
+                print("upstream_datasources_df4 cols: ", upstream_datasources_df.columns)
+            except KeyError:
+                upstream_datasources_df = pd.DataFrame()
+            return upstream_datasources_df
+        else:
+            raise ConnectionError(f"Received an unexpected response from the Metadata API: {response.content}")
 
     # DATASOURCES
 
@@ -257,7 +324,9 @@ class ExtractRefreshTaskManager:
         if datasource_df.empty:
             raise IndexError(f"No extract refresh tasks were found for the datasource (luid: {datasource_id}).")
         datasource_df = datasource_df[["name", "id", "project"]].rename(columns={"id": "datasource_id"})
-        datasource_refresh_tasks_df = datasource_df.merge(self.workbook_extract_refresh_tasks_df, on=["datasource_id"])
+        datasource_refresh_tasks_df = datasource_df.merge(
+            self.datasource_extract_refresh_tasks_df, on=["datasource_id"]
+        )
         return datasource_refresh_tasks_df
 
     def pause_datasource(
@@ -283,6 +352,21 @@ class ExtractRefreshTaskManager:
         responses = self._delete_extract_refresh_tasks(refresh_tasks_df=datasource_refresh_tasks_df)
         return responses
 
+    def _pause_upstream_datasources(self, workbook_id: str) -> List[requests.Response]:
+        """Pauses extract refresh tasks for a datasource upstream from a workbook.
+
+        Args:
+            # upstream_datasources_df: A Pandas DataFrame describing the upstream datasource being paused.
+            workbook_id: The local unique identifier (luid) of the workbook downstream from the datasource(s).
+        """
+        upstream_datasource_tasks_df = self._get_upstream_datasource_extract_tasks_df(workbook_id=workbook_id)
+        upstream_datasource_tasks_df["workbook_id"] = workbook_id
+        self._write_extract_refresh_tasks_to_pause(
+            extract_type="upstream_datasource", refresh_tasks_df=upstream_datasource_tasks_df
+        )
+        responses = self._delete_extract_refresh_tasks(refresh_tasks_df=upstream_datasource_tasks_df)
+        return responses
+
     def unpause_datasource(
         self, datasource_name: Optional[str] = None, datasource_id: Optional[str] = None
     ) -> List[requests.Response]:
@@ -304,4 +388,10 @@ class ExtractRefreshTaskManager:
             datasource_refresh_tasks_df["datasource_id"] == datasource_id
         ]
         responses = self._create_datasource_extract_refresh_tasks(refresh_tasks_df=datasource_refresh_tasks_df)
+        if all([True for response in responses if response.status_code == 200]):
+            self._remove_unpaused_extract_refresh_tasks(
+                extract_type="datasource", unpaused_tasks_df=datasource_refresh_tasks_df
+            )
+        else:
+            raise ValueError(f"Some of the extracts for datasource `luid: {datasource_id}` failed to unpause.")
         return responses

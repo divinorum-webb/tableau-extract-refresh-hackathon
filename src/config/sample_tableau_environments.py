@@ -1,4 +1,4 @@
-server_config = {
+authentication = {
     "tableau": {
         "server": "<YOUR_SERVER>",
         "api_version": "3.11",

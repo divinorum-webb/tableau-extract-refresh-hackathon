@@ -8,5 +8,5 @@
 *.xlsx
 *.json
 *.DS_Store
-src/config.py
+src/config/tableau_environments.py
 *__pycache__*
