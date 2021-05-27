@@ -1,7 +1,10 @@
 ## Tableau DataDev Hackathon - May 2021
 
 ### Objective
-Pause and unpause Tableau Server (or Tableau Online) extract refresh tasks.
+Pause and unpause Tableau Server (or Tableau Online) extract refresh tasks. Plug in the name or luid for the workbook 
+you want to pause, and all related extract refresh tasks will be paused until you unpause them.
+
+Workbooks can have upstream datasources, so if you pause a workbook then its upstream datasources should be paused as well.
 
 ### Problem Statement
 If you need to stop the extract refresh tasks for a workbook, datasource, or a workbook and
@@ -36,8 +39,8 @@ A lot is happening behind the scenes, which is why this solution leans on both
 the Metadata API and the REST API.
 
 #### Metadata API
-The Metadata API is used to query all of the data dependencies for a workbook or
-for a datasource. When pausing all extract refresh tasks for a workbook, you need 
+The Metadata API is used to identify dependencies between workbooks and datasources. When pausing all 
+extract refresh tasks for a workbook, you need 
 to stop extracts related to both the embedded extracts and the published datasources 
 the workbook uses. When pausing tasks for a specific datasource, this is more straightforward 
 as you only need to identify tasks directly related to that datasource.
