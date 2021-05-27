@@ -118,7 +118,7 @@ class ExtractRefreshTaskManager:
 
         Args:
             workbook_name: The name of the workbook whose tasks will be paused (deleted).
-            workbook_id: The local unique identifier (luid) of the workbook whose tasks will be unpaused (created).
+            workbook_id: The local unique identifier (luid) of the workbook whose tasks will be paused (deleted).
         Raises:
             ValueError: Neither a workbook name nor a workbook ID were provided.
         """
@@ -141,7 +141,7 @@ class ExtractRefreshTaskManager:
         one of them must be provided for this method to unpause a workbook.
 
         Args:
-            workbook_name: The name of the workbook whose extracts will be unpaused (deleted).
+            workbook_name: The name of the workbook whose extracts will be unpaused (created).
             workbook_id: The local unique identifier (luid) for the workbook whose extracts will be unpaused (created).
         Raises:
             ValueError: Neither a workbook name nor a workbook ID were provided.
@@ -212,7 +212,6 @@ class ExtractRefreshTaskManager:
         """Pauses extract refresh tasks for a datasource upstream from a workbook.
 
         Args:
-            # upstream_datasources_df: A Pandas DataFrame describing the upstream datasource being paused.
             workbook_id: The local unique identifier (luid) of the workbook downstream from the datasource(s).
         """
         upstream_datasource_tasks_df = self._get_upstream_datasource_extract_tasks_df(workbook_id=workbook_id)
@@ -302,7 +301,7 @@ class ExtractRefreshTaskManager:
         one of them must be provided for this method to unpause a datasource.
 
         Args:
-            datasource_name: The name of the datasource whose extracts will be unpaused (deleted).
+            datasource_name: The name of the datasource whose extracts will be unpaused (created).
             datasource_id: The local unique identifier (luid) for the datasource whose extracts will be unpaused (created).
         Raises:
             ValueError: Neither a datasource name nor a datasource ID were provided.
