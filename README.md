@@ -51,5 +51,12 @@ The REST API is our go-to tool for updating schedules and creating or deleting e
 refresh tasks. Additionally, we can use the REST API to query details for our workbooks, 
 datasources, schedules, and extract refresh tasks.
 
-### Usage Examples
+### How to get started
 
+Step 1: duplicate the file 'src/config/sample_tableau_environments.py' and name this file 'tableau_environments.py'.<br>
+Step 2: configure your Tableau environment in the file you just created.<br>
+Step 3: fetch the name (or luid) of a workbook or datasource you want to pause.<br>
+Step 4: modify the 'src/main.py' file to pause and unpause your workbook / datasource.<br>
+
+Consider this a demo of what's possible. Feel free to take this code and adapt
+it to your own environment as needed!

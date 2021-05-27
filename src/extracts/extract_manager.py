@@ -79,7 +79,7 @@ class ExtractRefreshTaskManager:
         """
         if not MetadataAPIConfig.is_valid_content_type(content_type=content_type):
             raise ValueError(
-                f"The content type `{content_type}` is not one of the valid types: {MetadataAPIConfig.CONTENT_TYPES.value}"
+                f"The content type `{content_type}` is not valid. Valid types: {MetadataAPIConfig.CONTENT_TYPES.value}."
             )
         tasks_df = self.extract_refresh_tasks_df[~self.extract_refresh_tasks_df[content_type].isnull()].copy()
         tasks_df = flatten_dict_column(
