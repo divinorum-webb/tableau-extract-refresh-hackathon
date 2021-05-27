@@ -56,7 +56,7 @@ datasources, schedules, and extract refresh tasks.
 Step 1: duplicate the file 'src/config/sample_tableau_environments.py' and name this file 'tableau_environments.py'.<br>
 Step 2: configure your Tableau environment in the file you just created.<br>
 Step 3: fetch the name (or luid) of a workbook or datasource you want to pause.<br>
-Step 4: modify the 'src/main.py' file to pause and unpause your workbook / datasource.<br>
+Step 4: modify the 'src/main.py' file to pause and unpause your workbook / datasource / scehdule of choice!<br>
 
 Consider this a demo of what's possible. Feel free to take this code and adapt
 it to your own environment as needed!
