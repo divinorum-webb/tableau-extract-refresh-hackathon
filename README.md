@@ -34,6 +34,11 @@ There is no REST API to pause and unpause an extract refresh task.
 This process makes it easy to delete all tasks associated with a workbook (or datasource)
 and to recreate (unpause) those tasks when the time is right.
 
+Check out the [YouTube Demo](https://youtu.be/umS-5j1jXiI)!
+
+Run this to install the tableau-api-lib package (required to use this project): <br>
+`pip install -U tableau-api-lib`
+
 ### Tableau Tools
 A lot is happening behind the scenes, which is why this solution leans on both 
 the Metadata API and the REST API.
