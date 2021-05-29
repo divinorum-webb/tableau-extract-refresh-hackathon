@@ -6,7 +6,7 @@ from tableau_api_lib import TableauServerConnection
 from tableau_api_lib.utils import querying, flatten_dict_column, flatten_dict_list_column
 from typeguard import typechecked
 
-from src.config.constants import MetadataAPIConfig, DataFrameColumns, RestAPIConfig
+from src.config.constants import ContentManagerConfig, MetadataAPIConfig, DataFrameColumns, RestAPIConfig
 from src.extracts.task_logger import ExtractRefreshTaskLogger
 from src.utils.datasource_manager import DatasourceManager
 from src.utils.workbook_manager import WorkbookManager
@@ -88,6 +88,36 @@ class ExtractRefreshTaskManager:
         tasks_df = flatten_dict_column(df=tasks_df, col_name=content_type, keys=[DataFrameColumns.CONTENT_ID.value])
         return tasks_df
 
+    @staticmethod
+    def _process_unpause_responses(
+        responses: List[requests.Response], refresh_tasks_df: pd.DataFrame, content_type: str, content_id: str
+    ) -> None:
+        """Validates the responses received after issuing API requests to unpause the relevant extract refresh tasks."""
+        if all(
+            [True for response in responses if response.status_code == RestAPIConfig.TASK_CREATED_SUCCESS_CODE.value]
+        ):
+            ExtractRefreshTaskLogger.remove_rows_for_unpaused_extract_refresh_tasks(
+                extract_refresh_task_type=content_type,
+                refresh_tasks_df=refresh_tasks_df,
+            )
+        else:
+            raise RuntimeError(f"Some of the extracts for {content_type} `luid: {content_id}` failed to unpause.")
+
+    @staticmethod
+    def _process_pause_responses(
+        responses: List[requests.Response], refresh_tasks_df: pd.DataFrame, content_type: str, content_id: str
+    ) -> None:
+        """Validates the responses received after issuing API requests to unpause the relevant extract refresh tasks."""
+        if all(
+            [True for response in responses if response.status_code == RestAPIConfig.TASK_DELETED_SUCCESS_CODE.value]
+        ):
+            ExtractRefreshTaskLogger.write_extract_refresh_tasks_to_pause(
+                extract_refresh_task_type=content_type,
+                refresh_tasks_df=refresh_tasks_df,
+            )
+        else:
+            raise RuntimeError(f"Some of the extracts for {content_type} `luid: {content_id}` failed to pause.")
+
     # EXTRACT REFRESH TASKS FOR WORKBOOKS
 
     @property
@@ -133,9 +163,11 @@ class ExtractRefreshTaskManager:
         if include_upstream is True:
             datasource_responses = self._pause_upstream_datasources(workbook_id=workbook_id)
         ExtractRefreshTaskLogger.write_extract_refresh_tasks_to_pause(
-            extract_type=MetadataAPIConfig.CONTENT_TYPE_WORKBOOK.value, refresh_tasks_df=workbook_refresh_tasks_df
+            extract_refresh_task_type=MetadataAPIConfig.CONTENT_TYPE_WORKBOOK.value,
+            refresh_tasks_df=workbook_refresh_tasks_df,
         )
         workbook_responses = self._delete_extract_refresh_tasks(refresh_tasks_df=workbook_refresh_tasks_df)
+        # self._process_pause_responses
         return workbook_responses, datasource_responses
 
     def unpause_workbook(
@@ -160,7 +192,7 @@ class ExtractRefreshTaskManager:
         if workbook_name:
             workbook_id = self.workbook_manager.get_content_id(content_name=workbook_name)
         workbook_refresh_tasks_df = ExtractRefreshTaskLogger.read_extract_refresh_tasks_to_unpause(
-            extract_type=MetadataAPIConfig.CONTENT_TYPE_WORKBOOK.value
+            extract_refresh_task_type=MetadataAPIConfig.CONTENT_TYPE_WORKBOOK.value
         )
         workbook_refresh_tasks_df = workbook_refresh_tasks_df[
             workbook_refresh_tasks_df[DataFrameColumns.WORKBOOK_ID.value] == workbook_id
@@ -168,18 +200,12 @@ class ExtractRefreshTaskManager:
         workbook_responses = self._create_workbook_extract_refresh_tasks(refresh_tasks_df=workbook_refresh_tasks_df)
         if include_upstream is True:
             datasource_responses = self.unpause_upstream_datasource(workbook_id=workbook_id)
-        if all(
-            [
-                True
-                for response in workbook_responses
-                if response.status_code == RestAPIConfig.TASK_CREATED_SUCCESS_CODE.value
-            ]
-        ):
-            ExtractRefreshTaskLogger.remove_rows_for_unpaused_extract_refresh_tasks(
-                extract_type=MetadataAPIConfig.CONTENT_TYPE_WORKBOOK.value, unpaused_tasks_df=workbook_refresh_tasks_df
-            )
-        else:
-            raise ValueError(f"Some of the extracts for workbook `luid: {workbook_id}` failed to unpause.")
+        self._process_unpause_responses(
+            responses=workbook_responses,
+            refresh_tasks_df=workbook_refresh_tasks_df,
+            content_type=ContentManagerConfig.CONTENT_TYPE_WORKBOOK.value,
+            content_id=workbook_id,
+        )
         return workbook_responses, datasource_responses
 
     # EXTRACT REFRESH TASKS FOR DATASOURCES UPSTREAM FROM WORKBOOKS
@@ -229,7 +255,7 @@ class ExtractRefreshTaskManager:
         upstream_datasource_tasks_df = self._get_upstream_datasource_extract_tasks_df(workbook_id=workbook_id)
         upstream_datasource_tasks_df[DataFrameColumns.WORKBOOK_ID.value] = workbook_id
         ExtractRefreshTaskLogger.write_extract_refresh_tasks_to_pause(
-            extract_type="upstream_datasource", refresh_tasks_df=upstream_datasource_tasks_df
+            extract_refresh_task_type="upstream_datasource", refresh_tasks_df=upstream_datasource_tasks_df
         )
         responses = self._delete_extract_refresh_tasks(refresh_tasks_df=upstream_datasource_tasks_df)
         return responses
@@ -241,22 +267,18 @@ class ExtractRefreshTaskManager:
             workbook_id: The local unique identifier (luid) for the workbook whose extracts will be unpaused (created).
         """
         upstream_datasource_tasks_df = ExtractRefreshTaskLogger.read_extract_refresh_tasks_to_unpause(
-            extract_type="upstream_datasource"
+            extract_refresh_task_type="upstream_datasource"
         )
         upstream_datasource_tasks_df = upstream_datasource_tasks_df[
             upstream_datasource_tasks_df[DataFrameColumns.WORKBOOK_ID.value] == workbook_id
         ]
         responses = self._create_datasource_extract_refresh_tasks(refresh_tasks_df=upstream_datasource_tasks_df)
-        if all(
-            [True for response in responses if response.status_code == RestAPIConfig.TASK_CREATED_SUCCESS_CODE.value]
-        ):
-            ExtractRefreshTaskLogger.remove_rows_for_unpaused_extract_refresh_tasks(
-                extract_type="upstream_datasource", unpaused_tasks_df=upstream_datasource_tasks_df
-            )
-        else:
-            raise ValueError(
-                f"Some of the extracts for upstream datasources `luid: {upstream_datasource_tasks_df[DataFrameColumns.DATASOURCE_ID.value]}` failed to unpause."
-            )
+        self._process_unpause_responses(
+            responses=responses,
+            refresh_tasks_df=upstream_datasource_tasks_df,
+            content_type=ContentManagerConfig.CONTENT_TYPE_WORKBOOK.value,
+            content_id=workbook_id,
+        )
         return responses
 
     # EXTRACT REFRESH TASKS FOR DATASOURCES
@@ -299,7 +321,7 @@ class ExtractRefreshTaskManager:
             datasource_id = self.datasource_manager.get_content_id(content_name=datasource_name)
         datasource_refresh_tasks_df = self._get_datasource_refresh_tasks(datasource_id=datasource_id)
         ExtractRefreshTaskLogger.write_extract_refresh_tasks_to_pause(
-            extract_type=MetadataAPIConfig.CONTENT_TYPE_DATASOURCE.value, refresh_tasks_df=datasource_refresh_tasks_df
+            extract_refresh_task_type=MetadataAPIConfig.CONTENT_TYPE_DATASOURCE.value, refresh_tasks_df=datasource_refresh_tasks_df
         )
         responses = self._delete_extract_refresh_tasks(refresh_tasks_df=datasource_refresh_tasks_df)
         return responses
@@ -321,19 +343,16 @@ class ExtractRefreshTaskManager:
         if datasource_name:
             datasource_id = self.datasource_manager.get_content_id(content_name=datasource_name)
         datasource_refresh_tasks_df = ExtractRefreshTaskLogger.read_extract_refresh_tasks_to_unpause(
-            extract_type=MetadataAPIConfig.CONTENT_TYPE_DATASOURCE.value
+            extract_refresh_task_type=MetadataAPIConfig.CONTENT_TYPE_DATASOURCE.value
         )
         datasource_refresh_tasks_df = datasource_refresh_tasks_df[
             datasource_refresh_tasks_df[DataFrameColumns.DATASOURCE_ID.value] == datasource_id
         ]
         responses = self._create_datasource_extract_refresh_tasks(refresh_tasks_df=datasource_refresh_tasks_df)
-        if all(
-            [True for response in responses if response.status_code == RestAPIConfig.TASK_CREATED_SUCCESS_CODE.value]
-        ):
-            ExtractRefreshTaskLogger.remove_rows_for_unpaused_extract_refresh_tasks(
-                extract_type=MetadataAPIConfig.CONTENT_TYPE_DATASOURCE.value,
-                unpaused_tasks_df=datasource_refresh_tasks_df,
-            )
-        else:
-            raise ValueError(f"Some of the extracts for datasource `luid: {datasource_id}` failed to unpause.")
+        self._process_unpause_responses(
+            responses=responses,
+            refresh_tasks_df=datasource_refresh_tasks_df,
+            content_type=ContentManagerConfig.CONTENT_TYPE_DATASOURCE.value,
+            content_id=datasource_id,
+        )
         return responses

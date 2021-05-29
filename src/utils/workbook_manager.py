@@ -4,11 +4,11 @@ from tableau_api_lib.utils import querying
 from typeguard import typechecked
 
 from src.config.constants import ContentManagerConfig
-from src.utils.base_manager import BaseManager
+from src.utils.content_manager import ContentManager
 
 
 @typechecked
-class WorkbookManager(BaseManager):
+class WorkbookManager(ContentManager):
     """Provides control over workbooks available in a Tableau environment."""
 
     def __init__(self, conn: TableauServerConnection):

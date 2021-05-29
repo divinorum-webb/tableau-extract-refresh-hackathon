@@ -6,6 +6,7 @@ class ContentManagerConfig(Enum):
     CONTENT_TYPE_DATASOURCE = "datasource"
     CONTENT_TYPE_WORKBOOK = "workbook"
     CONTENT_TYPE_SCHEDULE = "schedule"
+    CONTENT_TYPES = [CONTENT_TYPE_DATASOURCE, CONTENT_TYPE_WORKBOOK, CONTENT_TYPE_SCHEDULE]
 
 
 class DataFrameColumns(Enum):
@@ -13,14 +14,12 @@ class DataFrameColumns(Enum):
 
     CONTENT_ID = "id"
     DATASOURCE_ID = "datasource_id"
-    DATASOURCE_NAME = "datasource_name"
     HAS_EXTRACTS = "has_extracts"
     SCHEDULE_ID = "schedule_id"
     SCHEDULE_KEYS = ["id", "name"]
     SCHEDULE_NESTED = "schedule"
     TASK_ID = "id"
     WORKBOOK_ID = "workbook_id"
-    WORKBOOK_NAME = "workbook_name"
     UPSTREAM_DATASOURCES = "upstreamDatasources"
 
 

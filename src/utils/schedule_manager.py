@@ -4,11 +4,11 @@ from tableau_api_lib.utils import querying
 from typeguard import typechecked
 
 from src.config.constants import ContentManagerConfig
-from src.utils.base_manager import BaseManager
+from src.utils.content_manager import ContentManager
 
 
 @typechecked
-class ScheduleManager(BaseManager):
+class ScheduleManager(ContentManager):
     """Provides control over schedules available in a Tableau Server environment."""
 
     def __init__(self, conn: TableauServerConnection):

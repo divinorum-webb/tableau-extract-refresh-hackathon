@@ -8,7 +8,7 @@ from typeguard import typechecked
 
 
 @typechecked
-class BaseManager(ABC):
+class ContentManager(ABC):
     """Defines an abstract base class used to implement common content management functionality.
 
     While the extract manager plays the role of pausing and unpausing extract refresh tasks, there are other content
@@ -20,7 +20,7 @@ class BaseManager(ABC):
 
     def __init__(self, conn: TableauServerConnection, content_type: str):
         self.conn = conn
-        self._content_type = content_type
+        self.content_type = content_type
         self._content_df = None
 
     @property
@@ -36,7 +36,7 @@ class BaseManager(ABC):
             self.enforce_single_object_requirement(target_content_df=target_content_df, content_name=content_name)
             return target_content_df["id"].to_list()[0]
         except IndexError:
-            raise IndexError(f"No {self._content_type} with name `{content_name}` was found.")
+            raise IndexError(f"No {self.content_type} with name `{content_name}` was found.")
 
     def enforce_single_object_requirement(self, target_content_df: pd.DataFrame, content_name: str) -> None:
         """Raises an exception if multiple pieces of content match the given content name."""
@@ -44,9 +44,9 @@ class BaseManager(ABC):
             target_content_df = flatten_dict_column(df=target_content_df, col_name="project", keys=["name", "id"])
             raise NameError(
                 f"""
-            Multiple {self._content_type}s match the name `{content_name}`. 
-            Try using the {self._content_type} ID (luid) instead:
-            {target_content_df[["project_name", "name", "id"]]}
+            Multiple {self.content_type}s match the name `{content_name}`.\n
+            Try using the {self.content_type}'s local unique identifier ("id") instead:\n
+            {target_content_df[["project_name", "name", "id"]].to_markdown(index=False)}
             """
             )
 
@@ -54,5 +54,5 @@ class BaseManager(ABC):
         """Raises an exception if neither the content name nor the content ID (luid) are provided."""
         if not any([content_name, content_id]):
             raise ValueError(
-                f"To pause or unpause a {self._content_type}, provide its name or ID value (luid)."
+                f"To pause or unpause a {self.content_type}, provide its name or ID value (luid)."
             )
