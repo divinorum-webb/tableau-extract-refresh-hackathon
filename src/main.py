@@ -23,8 +23,8 @@ def main() -> None:
     # response = schedule_runner.pause_schedule(schedule_name=TEST_SCHEDULE_NAME)
     # response = schedule_runner.unpause_schedule(schedule_name=TEST_SCHEDULE_NAME)
 
-    response = extract_runner.pause_workbook(workbook_name=TEST_WORKBOOK_NAME)
-    # response = extract_runner.unpause_workbook(workbook_name=TEST_WORKBOOK_NAME)
+    # response = extract_runner.pause_workbook(workbook_id="912699c3-2b95-4668-95f4-fcf7d398be1a")
+    response = extract_runner.unpause_workbook(workbook_id="912699c3-2b95-4668-95f4-fcf7d398be1a")
 
     # response = extract_runner.pause_datasource(datasource_name=TEST_DATASOURCE_NAME)
     # response = extract_runner.unpause_datasource(datasource_name=TEST_DATASOURCE_NAME)
