@@ -30,6 +30,10 @@ Capabilities are as follows:
 3) Pausing all extract refresh tasks associated with a workbook or datasource.
 4) Unpausing all extract refresh tasks associated with a workbook or datasource.
 
+If you want to pause or unpause a workbook without impacting its upstream datasources, 
+you can do this by setting `include_upstream=False` flag when using the `.pause_workbook()` and 
+`.unpause_workbook()` methods.
+
 There is no REST API to pause and unpause an extract refresh task.
 This process makes it easy to delete all tasks associated with a workbook (or datasource)
 and to recreate (unpause) those tasks when the time is right.

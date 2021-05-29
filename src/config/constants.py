@@ -1,6 +1,13 @@
 from enum import Enum
 
 
+class ContentManagerConfig(Enum):
+    """Defines constants for Tableau content managers."""
+    CONTENT_TYPE_DATASOURCE = "datasource"
+    CONTENT_TYPE_WORKBOOK = "workbook"
+    CONTENT_TYPE_SCHEDULE = "schedule"
+
+
 class DataFrameColumns(Enum):
     """Defines column names for data returned by the Metadata API queries."""
 

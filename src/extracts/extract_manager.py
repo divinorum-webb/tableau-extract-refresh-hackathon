@@ -97,8 +97,8 @@ class ExtractRefreshTaskManager:
 
     def _get_workbook_refresh_tasks(self, workbook_id: str) -> pd.DataFrame:
         """Returns the extract refresh tasks associated with a specific workbook."""
-        workbook_df = self.workbook_manager.workbooks_df[
-            self.workbook_manager.workbooks_df[DataFrameColumns.CONTENT_ID.value] == workbook_id
+        workbook_df = self.workbook_manager.content_df[
+            self.workbook_manager.content_df[DataFrameColumns.CONTENT_ID.value] == workbook_id
         ]
         if workbook_df.empty:
             raise IndexError(f"No extract refresh tasks were found for the workbook (luid: {workbook_id}).")
@@ -128,7 +128,7 @@ class ExtractRefreshTaskManager:
         """
         datasource_responses = []
         if workbook_name:
-            workbook_id = self.workbook_manager.get_workbook_id(workbook_name=workbook_name)
+            workbook_id = self.workbook_manager.get_content_id(content_name=workbook_name)
         workbook_refresh_tasks_df = self._get_workbook_refresh_tasks(workbook_id=workbook_id)
         if include_upstream is True:
             datasource_responses = self._pause_upstream_datasources(workbook_id=workbook_id)
@@ -156,8 +156,9 @@ class ExtractRefreshTaskManager:
         Raises:
             ValueError: Neither a workbook name nor a workbook ID were provided.
         """
+        datasource_responses = []
         if workbook_name:
-            workbook_id = self.workbook_manager.get_workbook_id(workbook_name=workbook_name)
+            workbook_id = self.workbook_manager.get_content_id(content_name=workbook_name)
         workbook_refresh_tasks_df = ExtractRefreshTaskLogger.read_extract_refresh_tasks_to_unpause(
             extract_type=MetadataAPIConfig.CONTENT_TYPE_WORKBOOK.value
         )
@@ -165,7 +166,8 @@ class ExtractRefreshTaskManager:
             workbook_refresh_tasks_df[DataFrameColumns.WORKBOOK_ID.value] == workbook_id
         ]
         workbook_responses = self._create_workbook_extract_refresh_tasks(refresh_tasks_df=workbook_refresh_tasks_df)
-        datasource_responses = self.unpause_upstream_datasource(workbook_id=workbook_id)
+        if include_upstream is True:
+            datasource_responses = self.unpause_upstream_datasource(workbook_id=workbook_id)
         if all(
             [
                 True
@@ -266,8 +268,8 @@ class ExtractRefreshTaskManager:
 
     def _get_datasource_refresh_tasks(self, datasource_id: str) -> pd.DataFrame:
         """Returns the extract refresh tasks associated with a specific datasource."""
-        datasource_df = self.datasource_manager.datasources_df[
-            self.datasource_manager.datasources_df[DataFrameColumns.CONTENT_ID.value] == datasource_id
+        datasource_df = self.datasource_manager.content_df[
+            self.datasource_manager.content_df[DataFrameColumns.CONTENT_ID.value] == datasource_id
         ]
         if datasource_df.empty:
             raise IndexError(f"No extract refresh tasks were found for the datasource (luid: {datasource_id}).")
@@ -294,7 +296,7 @@ class ExtractRefreshTaskManager:
             ValueError: Neither a datasource name nor a datasource ID were provided.
         """
         if datasource_name:
-            datasource_id = self.datasource_manager.get_datasource_id(datasource_name=datasource_name)
+            datasource_id = self.datasource_manager.get_content_id(content_name=datasource_name)
         datasource_refresh_tasks_df = self._get_datasource_refresh_tasks(datasource_id=datasource_id)
         ExtractRefreshTaskLogger.write_extract_refresh_tasks_to_pause(
             extract_type=MetadataAPIConfig.CONTENT_TYPE_DATASOURCE.value, refresh_tasks_df=datasource_refresh_tasks_df
@@ -317,7 +319,7 @@ class ExtractRefreshTaskManager:
             ValueError: Neither a datasource name nor a datasource ID were provided.
         """
         if datasource_name:
-            datasource_id = self.datasource_manager.get_datasource_id(datasource_name=datasource_name)
+            datasource_id = self.datasource_manager.get_content_id(content_name=datasource_name)
         datasource_refresh_tasks_df = ExtractRefreshTaskLogger.read_extract_refresh_tasks_to_unpause(
             extract_type=MetadataAPIConfig.CONTENT_TYPE_DATASOURCE.value
         )
