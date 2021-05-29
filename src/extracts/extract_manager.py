@@ -20,6 +20,15 @@ class ExtractRefreshTaskManager:
     1) Supsending (pausing) and activating (unpausing) an entire schedule and all of its associated tasks.
     2) Deleting (pausing) and creating (unpausing) individual extract refresh tasks.
 
+    When pausing and unpausing a workbook, you have can include the optional `include_upstream` boolean flag.
+    If `include_upstream` is True then all extract refresh tasks (including those belonging to embedded
+    extracts and all associated upstream datasources) will be paused or unpaused.
+    If `include_upstream` is False then only the workbook's embedded extracts are paused or unpaused.
+
+    Example usage:
+        extract_runner = ExtractRefreshTaskManager(conn=tableau_connection)
+        response = extract_runner.pause_workbook(workbook_id=<YOUR_WORKBOOK_ID>, include_upstream=False)
+
     Args:
         conn: An active Tableau Server (or Tableau Online) connection signed in and having a valid auth token.
     """
