@@ -22,7 +22,7 @@ class DatasourceManager:
     def get_datasource_id(self, datasource_name: str) -> str:
         """Returns the local unique identifier (luid) for the named Tableau Server datasources."""
         try:
-            target_datasource_df = self.datasources_df[self.datasources_df["name"] == datasource_name]
+            target_datasource_df = self.datasources_df[self.datasources_df["name"] == datasource_name].copy()
             self.enforce_single_datasource_requirement(
                 target_datasource_df=target_datasource_df, datasource_name=datasource_name
             )

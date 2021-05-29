@@ -22,7 +22,7 @@ class WorkbookManager:
     def get_workbook_id(self, workbook_name: str) -> str:
         """Returns the local unique identifier (luid) for the named Tableau Server workbook."""
         try:
-            target_workbook_df = self.workbooks_df[self.workbooks_df["name"] == workbook_name]
+            target_workbook_df = self.workbooks_df[self.workbooks_df["name"] == workbook_name].copy()
             self.enforce_single_workbook_requirement(target_workbook_df=target_workbook_df, workbook_name=workbook_name)
             return target_workbook_df["id"].to_list()[0]
         except IndexError:
