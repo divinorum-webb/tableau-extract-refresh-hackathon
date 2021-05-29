@@ -109,7 +109,10 @@ class ExtractRefreshTaskManager:
         return workbook_refresh_tasks_df
 
     def pause_workbook(
-        self, workbook_name: Optional[str] = None, workbook_id: Optional[str] = None
+        self,
+        workbook_name: Optional[str] = None,
+        workbook_id: Optional[str] = None,
+        include_upstream: Optional[bool] = True,
     ) -> Tuple[List[requests.Response], List[requests.Response]]:
         """Pauses extract refresh tasks for a workbook.
 
@@ -119,13 +122,16 @@ class ExtractRefreshTaskManager:
         Args:
             workbook_name: The name of the workbook whose tasks will be paused (deleted).
             workbook_id: The local unique identifier (luid) of the workbook whose tasks will be paused (deleted).
+            include_upstream: True if pausing upstream datasources for the workbook, False otherwise.
         Raises:
             ValueError: Neither a workbook name nor a workbook ID were provided.
         """
+        datasource_responses = []
         if workbook_name:
             workbook_id = self.workbook_manager.get_workbook_id(workbook_name=workbook_name)
         workbook_refresh_tasks_df = self._get_workbook_refresh_tasks(workbook_id=workbook_id)
-        datasource_responses = self._pause_upstream_datasources(workbook_id=workbook_id)
+        if include_upstream is True:
+            datasource_responses = self._pause_upstream_datasources(workbook_id=workbook_id)
         ExtractRefreshTaskLogger.write_extract_refresh_tasks_to_pause(
             extract_type=MetadataAPIConfig.CONTENT_TYPE_WORKBOOK.value, refresh_tasks_df=workbook_refresh_tasks_df
         )
@@ -133,7 +139,10 @@ class ExtractRefreshTaskManager:
         return workbook_responses, datasource_responses
 
     def unpause_workbook(
-        self, workbook_name: Optional[str] = None, workbook_id: Optional[str] = None
+        self,
+        workbook_name: Optional[str] = None,
+        workbook_id: Optional[str] = None,
+        include_upstream: Optional[bool] = True,
     ) -> Tuple[List[requests.Response], List[requests.Response]]:
         """Unpauses extract refresh tasks for a workbook.
 
@@ -143,6 +152,7 @@ class ExtractRefreshTaskManager:
         Args:
             workbook_name: The name of the workbook whose extracts will be unpaused (created).
             workbook_id: The local unique identifier (luid) for the workbook whose extracts will be unpaused (created).
+            include_upstream: True if unpausing upstream datasources for the workbook, False otherwise.
         Raises:
             ValueError: Neither a workbook name nor a workbook ID were provided.
         """
