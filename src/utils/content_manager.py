@@ -50,7 +50,7 @@ class ContentManager(ABC):
             """
             )
 
-    def validate_workbook_inputs(self, content_name: Optional[str] = None, content_id: Optional[str] = None) -> None:
+    def validate_content_inputs(self, content_name: Optional[str] = None, content_id: Optional[str] = None) -> None:
         """Raises an exception if neither the content name nor the content ID (luid) are provided."""
         if not any([content_name, content_id]):
             raise ValueError(
