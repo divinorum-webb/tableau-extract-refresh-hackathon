@@ -15,7 +15,7 @@ class ContentManager(ABC):
     managers that help the extract manager obtain information about various types of Tableau content.
 
     The content managers all inherit a common set of validation and getter functions.
-    The BaseManager class implements this common functionality from within a single Abstract Base Class.
+    The BaseManager class implements this common functionality from within a single abstract base class.
     """
 
     def __init__(self, conn: TableauServerConnection, content_type: str):
