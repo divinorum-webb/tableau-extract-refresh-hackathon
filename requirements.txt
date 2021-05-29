@@ -1,4 +1,5 @@
 pandas
 requests
 tableau_api_lib
+tabulate
 typeguard

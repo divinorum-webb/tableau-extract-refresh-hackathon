@@ -62,6 +62,7 @@ datasources, schedules, and extract refresh tasks.
 
 ### How to get started
 
+Step 0: run `pip install -r requirements.txt` to install the required packages.<br>
 Step 1: duplicate the file 'src/config/sample_tableau_environments.py' and name this file 'tableau_environments.py'.<br>
 Step 2: configure your Tableau environment in the file you just created.<br>
 Step 3: fetch the name (or luid) of a workbook or datasource you want to pause.<br>
