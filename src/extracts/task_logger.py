@@ -11,7 +11,12 @@ class ExtractRefreshTaskLogger:
     @staticmethod
     def write_extract_refresh_tasks_to_pause(extract_refresh_task_type: str, refresh_tasks_df: pd.DataFrame) -> None:
         """Writes the details for the extract refresh tasks that will be paused to a CSV file."""
-        refresh_tasks_df.to_csv(f"data/paused_{extract_refresh_task_type}_extract_refresh_tasks.csv")
+        file = f"data/paused_{extract_refresh_task_type}_extract_refresh_tasks.csv"
+        existing_extracts_df = pd.read_csv(file)
+        if existing_extracts_df.empty:
+            refresh_tasks_df.to_csv(file, mode="w", index=False)
+        else:
+            refresh_tasks_df.to_csv(file, mode="a", header=False, index=False)
 
     @staticmethod
     def read_extract_refresh_tasks_to_unpause(extract_refresh_task_type: str) -> pd.DataFrame:
@@ -27,4 +32,6 @@ class ExtractRefreshTaskLogger:
             extract_refresh_task_type=extract_refresh_task_type
         )
         existing_tasks_df = existing_tasks_df[~existing_tasks_df["id"].isin(refresh_tasks_df["id"])]
-        existing_tasks_df.to_csv(f"data/paused_{extract_refresh_task_type}_extract_refresh_tasks.csv", mode="w")
+        existing_tasks_df.to_csv(
+            f"data/paused_{extract_refresh_task_type}_extract_refresh_tasks.csv", mode="w", index=False
+        )

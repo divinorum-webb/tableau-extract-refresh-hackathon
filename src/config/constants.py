@@ -4,8 +4,9 @@ from enum import Enum
 class ContentManagerConfig(Enum):
     """Defines constants for Tableau content managers."""
     CONTENT_TYPE_DATASOURCE = "datasource"
-    CONTENT_TYPE_WORKBOOK = "workbook"
     CONTENT_TYPE_SCHEDULE = "schedule"
+    CONTENT_TYPE_UPSTREAM_DATASOURCE = "upstream_datasource"
+    CONTENT_TYPE_WORKBOOK = "workbook"
     CONTENT_TYPES = [CONTENT_TYPE_DATASOURCE, CONTENT_TYPE_WORKBOOK, CONTENT_TYPE_SCHEDULE]
 
 

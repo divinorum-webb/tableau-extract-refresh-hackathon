@@ -176,12 +176,12 @@ class ExtractRefreshTaskManager:
             refresh_tasks_df=workbook_refresh_tasks_df,
         )
         workbook_responses = self._delete_extract_refresh_tasks(refresh_tasks_df=workbook_refresh_tasks_df)
-        self._process_pause_responses(
-            responses=workbook_responses,
-            refresh_tasks_df=workbook_refresh_tasks_df,
-            content_type=ContentManagerConfig.CONTENT_TYPE_WORKBOOK.value,
-            content_id=workbook_id,
-        )
+        # self._process_pause_responses(
+        #     responses=workbook_responses,
+        #     refresh_tasks_df=workbook_refresh_tasks_df,
+        #     content_type=ContentManagerConfig.CONTENT_TYPE_WORKBOOK.value,
+        #     content_id=workbook_id,
+        # )
         return workbook_responses, datasource_responses
 
     def unpause_workbook(
@@ -269,15 +269,10 @@ class ExtractRefreshTaskManager:
         upstream_datasource_tasks_df = self._get_upstream_datasource_extract_tasks_df(workbook_id=workbook_id)
         upstream_datasource_tasks_df[DataFrameColumns.WORKBOOK_ID.value] = workbook_id
         ExtractRefreshTaskLogger.write_extract_refresh_tasks_to_pause(
-            extract_refresh_task_type="upstream_datasource", refresh_tasks_df=upstream_datasource_tasks_df
+            extract_refresh_task_type=ContentManagerConfig.CONTENT_TYPE_UPSTREAM_DATASOURCE.value,
+            refresh_tasks_df=upstream_datasource_tasks_df,
         )
         responses = self._delete_extract_refresh_tasks(refresh_tasks_df=upstream_datasource_tasks_df)
-        self._process_unpause_responses(
-            responses=responses,
-            refresh_tasks_df=upstream_datasource_tasks_df,
-            content_type=ContentManagerConfig.CONTENT_TYPE_WORKBOOK.value,
-            content_id=workbook_id,
-        )
         return responses
 
     def unpause_upstream_datasource(self, workbook_id: str) -> List[requests.Response]:
@@ -287,7 +282,7 @@ class ExtractRefreshTaskManager:
             workbook_id: The local unique identifier (luid) for the workbook whose extracts will be unpaused (created).
         """
         upstream_datasource_tasks_df = ExtractRefreshTaskLogger.read_extract_refresh_tasks_to_unpause(
-            extract_refresh_task_type="upstream_datasource"
+            extract_refresh_task_type=ContentManagerConfig.CONTENT_TYPE_UPSTREAM_DATASOURCE.value
         )
         upstream_datasource_tasks_df = upstream_datasource_tasks_df[
             upstream_datasource_tasks_df[DataFrameColumns.WORKBOOK_ID.value] == workbook_id
@@ -296,7 +291,7 @@ class ExtractRefreshTaskManager:
         self._process_unpause_responses(
             responses=responses,
             refresh_tasks_df=upstream_datasource_tasks_df,
-            content_type=ContentManagerConfig.CONTENT_TYPE_WORKBOOK.value,
+            content_type=ContentManagerConfig.CONTENT_TYPE_UPSTREAM_DATASOURCE.value,
             content_id=workbook_id,
         )
         return responses
@@ -345,12 +340,6 @@ class ExtractRefreshTaskManager:
             refresh_tasks_df=datasource_refresh_tasks_df,
         )
         responses = self._delete_extract_refresh_tasks(refresh_tasks_df=datasource_refresh_tasks_df)
-        self._process_pause_responses(
-            responses=responses,
-            refresh_tasks_df=datasource_refresh_tasks_df,
-            content_type=ContentManagerConfig.CONTENT_TYPE_DATASOURCE.value,
-            content_id=datasource_id,
-        )
         return responses
 
     def unpause_datasource(
