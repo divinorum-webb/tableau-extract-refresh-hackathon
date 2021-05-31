@@ -112,21 +112,6 @@ class ExtractRefreshTaskManager:
         else:
             raise RuntimeError(f"Some of the extracts for {content_type} `luid: {content_id}` failed to unpause.")
 
-    @staticmethod
-    def _process_pause_responses(
-        responses: List[requests.Response], refresh_tasks_df: pd.DataFrame, content_type: str, content_id: str
-    ) -> None:
-        """Validates the responses received after issuing API requests to unpause the relevant extract refresh tasks."""
-        if all(
-            [True for response in responses if response.status_code == RestAPIConfig.TASK_DELETED_SUCCESS_CODE.value]
-        ):
-            ExtractRefreshTaskLogger.write_extract_refresh_tasks_to_pause(
-                extract_refresh_task_type=content_type,
-                refresh_tasks_df=refresh_tasks_df,
-            )
-        else:
-            raise RuntimeError(f"Some of the extracts for {content_type} `luid: {content_id}` failed to pause.")
-
     # EXTRACT REFRESH TASKS FOR WORKBOOKS
 
     @property
@@ -176,12 +161,6 @@ class ExtractRefreshTaskManager:
             refresh_tasks_df=workbook_refresh_tasks_df,
         )
         workbook_responses = self._delete_extract_refresh_tasks(refresh_tasks_df=workbook_refresh_tasks_df)
-        # self._process_pause_responses(
-        #     responses=workbook_responses,
-        #     refresh_tasks_df=workbook_refresh_tasks_df,
-        #     content_type=ContentManagerConfig.CONTENT_TYPE_WORKBOOK.value,
-        #     content_id=workbook_id,
-        # )
         return workbook_responses, datasource_responses
 
     def unpause_workbook(

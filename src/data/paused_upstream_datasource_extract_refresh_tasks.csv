@@ -1,1 +1,1 @@
-name,datasource_id,project,id,priority,consecutiveFailedCount,type,workbook,schedule_id,schedule_name,workbook_id
+name,datasource_id,project,workbook,id,priority,consecutiveFailedCount,type,schedule_id,schedule_name,workbook_id
