@@ -176,7 +176,12 @@ class ExtractRefreshTaskManager:
             refresh_tasks_df=workbook_refresh_tasks_df,
         )
         workbook_responses = self._delete_extract_refresh_tasks(refresh_tasks_df=workbook_refresh_tasks_df)
-        # self._process_pause_responses
+        self._process_pause_responses(
+            responses=workbook_responses,
+            refresh_tasks_df=workbook_refresh_tasks_df,
+            content_type=ContentManagerConfig.CONTENT_TYPE_WORKBOOK.value,
+            content_id=workbook_id,
+        )
         return workbook_responses, datasource_responses
 
     def unpause_workbook(
@@ -267,6 +272,12 @@ class ExtractRefreshTaskManager:
             extract_refresh_task_type="upstream_datasource", refresh_tasks_df=upstream_datasource_tasks_df
         )
         responses = self._delete_extract_refresh_tasks(refresh_tasks_df=upstream_datasource_tasks_df)
+        self._process_unpause_responses(
+            responses=responses,
+            refresh_tasks_df=upstream_datasource_tasks_df,
+            content_type=ContentManagerConfig.CONTENT_TYPE_WORKBOOK.value,
+            content_id=workbook_id,
+        )
         return responses
 
     def unpause_upstream_datasource(self, workbook_id: str) -> List[requests.Response]:
@@ -330,9 +341,16 @@ class ExtractRefreshTaskManager:
             datasource_id = self.datasource_manager.get_content_id(content_name=datasource_name)
         datasource_refresh_tasks_df = self._get_datasource_refresh_tasks(datasource_id=datasource_id)
         ExtractRefreshTaskLogger.write_extract_refresh_tasks_to_pause(
-            extract_refresh_task_type=MetadataAPIConfig.CONTENT_TYPE_DATASOURCE.value, refresh_tasks_df=datasource_refresh_tasks_df
+            extract_refresh_task_type=MetadataAPIConfig.CONTENT_TYPE_DATASOURCE.value,
+            refresh_tasks_df=datasource_refresh_tasks_df,
         )
         responses = self._delete_extract_refresh_tasks(refresh_tasks_df=datasource_refresh_tasks_df)
+        self._process_pause_responses(
+            responses=responses,
+            refresh_tasks_df=datasource_refresh_tasks_df,
+            content_type=ContentManagerConfig.CONTENT_TYPE_DATASOURCE.value,
+            content_id=datasource_id,
+        )
         return responses
 
     def unpause_datasource(
